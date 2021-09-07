@@ -4,16 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "nodemon app.js",
     "lint": "eslint"
   },
   "keywords": [],
   "author": "Ilia Naumenko",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^6.0.5"
+  },
   "devDependencies": {
     "eslint": "^7.2.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.24.2",
-    "webpack": "^5.52.0"
+    "nodemon": "^2.0.12"
   }
 }
