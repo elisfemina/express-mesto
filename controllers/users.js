@@ -12,7 +12,7 @@ const getUser = (req, res) => {
       }
       return res.status(200).send(user);
     })
-    .catch(() => {
+    .catch((err) => {
       if (err.name === "CastError") {
         res.status(400).send({ message: "Невалидный id " });
       } else {
@@ -49,8 +49,13 @@ const createUser = (req, res) => {
 
 const updateUser = (req, res) => {
   const id = req.user._id;
+  const { name, about } = req.body;
 
-  return User.findByIdAndUpdate(id)
+  return User.findByIdAndUpdate(
+    id,
+    { name, about },
+    { new: true, runValidators: true },
+  )
     .then((user) => {
       if (!user) {
         return res
@@ -59,7 +64,7 @@ const updateUser = (req, res) => {
       }
       return res.status(200).send(user);
     })
-    .catch(() => {
+    .catch((err) => {
       if (err.name === "ValidationError") {
         res.status(400).send({ message: "Некорректные данные" });
       } else {
@@ -74,7 +79,7 @@ const updateAvatarUser = (req, res) => {
   return User.findByIdAndUpdate(
     req.params.id,
     { avatar },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   )
     .then((user) => {
       if (!user) {
@@ -84,7 +89,7 @@ const updateAvatarUser = (req, res) => {
       }
       return res.status(200).send(user);
     })
-    .catch(() => {
+    .catch((err) => {
       if (err.name === "ValidationError") {
         res.status(400).send({ message: "Некорректные данные" });
       } else {

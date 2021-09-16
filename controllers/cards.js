@@ -25,11 +25,11 @@ const deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.id)
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ massage: "Невалидный id" });
+        return res.status(404).send({ message: "Невалидный id" });
       }
       return res.send({ data: card });
     })
-    .catch(() => {
+    .catch((err) => {
       if (err.name === "CastError") {
         res.status(400).send({ message: "Невалидный id" });
       } else {
@@ -42,15 +42,15 @@ const likeCard = (req, res) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $addToSet: { likes: req.user._id } }, // добавить _id в массив, если его там нет
-    { new: true }
+    { new: true },
   )
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ massage: "Невалидный id" });
+        return res.status(404).send({ message: "Невалидный id" });
       }
       return res.send({ data: card });
     })
-    .catch(() => {
+    .catch((err) => {
       if (err.name === "CastError") {
         res.status(400).send({ message: "Невалидный id" });
       } else {
@@ -63,15 +63,15 @@ const dislikeCard = (req, res) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } }, // убрать _id из массива
-    { new: true }
+    { new: true },
   )
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ massage: "Невалидный id" });
+        return res.status(404).send({ message: "Невалидный id" });
       }
       return res.send({ data: card });
     })
-    .catch(() => {
+    .catch((err) => {
       if (err.name === "CastError") {
         res.status(400).send({ message: "Невалидный id" });
       } else {
