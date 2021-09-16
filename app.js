@@ -2,7 +2,6 @@ const path = require("path");
 const express = require("express");
 const mongoose = require("mongoose");
 
-
 const { PORT = 3000 } = process.env;
 const app = express();
 
@@ -13,20 +12,19 @@ app.get("/", (req, res) => {
   res.send("Hello World2");
 });
 
-// app.use((req, res, next) => {
-//   req.user = {
-//     _id: "5d8b8592978f8bd833ca8133", // вставьте сюда _id созданного в предыдущем пункте пользователя
-//   };
+app.use((req, res, next) => {
+  req.user = {
+    _id: "6141cc6ab0fd4840bd5110f7", // вставьте сюда _id созданного в предыдущем пункте пользователя
+  };
 
-//   next();
-// });
+  next();
+});
 
-mongoose
-  .connect("mongodb://localhost:27017/mestodb")
-  .then(() => console.log("Database connected!"))
-  .catch((err) => console.log(err));
+mongoose.connect("mongodb://localhost:27017/mestodb", {
+  useNewUrlParser: true,
+});
 
-mongoose.connection.on("open", () => console.log("DB Connected!"));
+app.use("/users", require("./routes/users"));
 
 app.use(express.static(path.join(__dirname, "public")));
 
