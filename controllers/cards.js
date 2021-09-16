@@ -10,7 +10,7 @@ const createCard = (req, res) => {
   console.log(req.user._id);
   const { name, link } = req.body;
 
-  return Card.create({ name, link })
+  return Card.create({ name, link, owner: req.user._id })
     .then((card) => res.status(201).send({ data: card }))
     .catch((err) => {
       if (err.name === "ValidationError") {
@@ -22,7 +22,7 @@ const createCard = (req, res) => {
 };
 
 const deleteCard = (req, res) => {
-  Card.findByIdAndRemove(req.params.id)
+  Card.findByIdAndRemove(req.params.cardId)
     .then((card) => {
       if (!card) {
         return res.status(404).send({ message: "Невалидный id" });
