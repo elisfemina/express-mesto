@@ -1,12 +1,12 @@
 {
   "name": "express-mesto",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "mesto",
+  "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "lint": "eslint"
+    "lint": "npx eslint"
   },
   "keywords": [],
   "author": "Ilia Naumenko",
