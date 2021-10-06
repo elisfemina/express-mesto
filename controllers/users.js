@@ -1,43 +1,43 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
+const NotFoundError = require('../errors/not-found-err');
+const BadRequest = require('../errors/bad-request');
+const Conflict = require("../errors/conflict");
+const Unauthorized = require("../errors/unauthorized");
 
 const SALT_ROUNDS = 10;
 
-const getUser = (req, res) => {
+const getUser = (req, res, next) => {
   const { userId } = req.params;
 
   return User.findById(userId)
     .then((user) => {
       if (!user) {
-        return res
-          .status(404)
-          .send({ message: "Запрашиваемый пользователь не найден" });
+        throw new NotFoundError("Запрашиваемый пользователь не найден");
       }
       return res.status(200).send(user);
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        res.status(400).send({ message: "Невалидный id " });
+        next(new BadRequest("Невалидный id "));
       } else {
-        res.status(500).send({ message: "Произошла ошибка" });
+        next(err);
       }
     });
 };
 
-const getUsers = (req, res) => {
+const getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.status(200).send(users))
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .catch(next);
 };
 
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
-  if (email) {
-    return res.status(409).send({ message: 'Такой пользователь уже есть' });
-  }
+
   return bcrypt
     .hash(password, SALT_ROUNDS)
     .then((hash) => User.create({
@@ -54,20 +54,21 @@ const createUser = (req, res) => {
     }))
 
     .catch((err) => {
-      // Записал проверку на уже существующий аккаунт (почту) выше, перед bcrypt. Верно ли?
-      if (err.name === "ValidationError") {
-        res.status(400).send({
-          message: `${Object.values(err.errors)
+      if (err.name === 'MongoServerError' && err.code === 11000) {
+        next(new Conflict('Пользователь с указанным email уже существует'));
+      } else if (err.name === "ValidationError") {
+        next(new BadRequest(
+          `${Object.values(err.errors)
             .map((error) => error.message)
             .join(", ")}`,
-        });
+        ));
       } else {
-        res.status(500).send({ message: "Произошла ошибка" });
+        next(err);
       }
     });
 };
 
-const updateUser = (req, res) => {
+const updateUser = (req, res, next) => {
   const id = req.user._id;
   const { name, about } = req.body;
 
@@ -78,22 +79,20 @@ const updateUser = (req, res) => {
   )
     .then((user) => {
       if (!user) {
-        return res
-          .status(404)
-          .send({ message: "Запрашиваемый пользователь не найден" });
+        throw new NotFoundError("Запрашиваемый пользователь не найден");
       }
       return res.status(200).send(user);
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        res.status(400).send({ message: "Некорректные данные" });
+        next(new BadRequest("Некорректные данные"));
       } else {
-        res.status(500).send({ message: "Произошла ошибка" });
+        next(err);
       }
     });
 };
 
-const updateAvatarUser = (req, res) => {
+const updateAvatarUser = (req, res, next) => {
   const { avatar } = req.body;
 
   return User.findByIdAndUpdate(
@@ -103,48 +102,44 @@ const updateAvatarUser = (req, res) => {
   )
     .then((user) => {
       if (!user) {
-        return res
-          .status(404)
-          .send({ message: "Запрашиваемый пользователь не найден" });
+        throw new NotFoundError("Запрашиваемый пользователь не найден");
       }
       return res.status(200).send(user);
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        res.status(400).send({ message: "Некорректные данные" });
+        next(new BadRequest("Некорректные данные"));
       } else {
-        res.status(500).send({ message: "Произошла ошибка" });
+        next(err);
       }
     });
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
-  const id = req.user._id;
-
-  if (!email || !password) {
-    return res.status(400).send({ message: "Отсутствует email или пароль" });
-  }
 
   return User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
         return Promise.reject(new Error('Неправильные почта или пароль'));
       }
-      return bcrypt.compare(password, user.password);
+      return bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            return Promise.reject(new Error('Неправильные почта или пароль'));
+          }
+          return user;
+        })
+        .then((checkedUser) => {
+          const token = jwt.sign({ _id: checkedUser._id }, 'some-secret-key');
+          return res.send({ token });
+        })
+        .catch(() => {
+          next(new Unauthorized('Неверный логин или пароль'));
+        });
     })
-    .then((matched) => {
-      if (!matched) {
-        return Promise.reject(new Error('Неправильные почта или пароль'));
-      }
-
-      const token = jwt.sign({ id }, 'some-secret-key');
-      return res.send(token);
-    })
-    .catch((err) => {
-      res
-        .status(401)
-        .send({ message: err.message });
+    .catch(() => {
+      next(new Unauthorized('Неверный логин или пароль'));
     });
 };
 
