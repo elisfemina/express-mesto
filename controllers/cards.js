@@ -1,5 +1,7 @@
 const Card = require("../models/card");
 const NotFoundError = require('../errors/not-found-err');
+const BadRequest = require('../errors/bad-request');
+const Forbidden = require('../errors/forbidden');
 
 const getCards = (req, res) => {
   Card.find({})
@@ -7,7 +9,7 @@ const getCards = (req, res) => {
     .catch((err) => res.status(500).send({ message: err.message }));
 };
 
-const createCard = (req, res) => {
+const createCard = (req, res, next) => {
   console.log(req.user._id);
   const { name, link } = req.body;
 
@@ -15,34 +17,34 @@ const createCard = (req, res) => {
     .then((card) => res.status(201).send({ data: card }))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        res.status(400).send({ message: "Некорректные данные" });
+        next(new BadRequest("Некорректные данные"));
       } else {
-        res.status(500).send({ message: err.message });
+        next(err);
       }
     });
 };
 
-const deleteCard = (req, res) => {
-  const { id } = req.params;
-  Card.findById(id)
+const deleteCard = (req, res, next) => {
+  const { cardId } = req.params;
+  Card.findById(cardId)
     .orFail(() => new NotFoundError('Нет карточки по заданному id'))
     .then((card) => {
       if (!card.owner.equals(req.user._id)) {
-        return res.status(403).send({ message: "Нельзя удалить чужую карточку" });
+        next(new Forbidden({ message: "Нельзя удалить чужую карточку" }));
       }
       return Card.deleteOne(card)
         .then(() => res.send({ data: card }));
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        res.status(400).send({ message: "Невалидный id" });
+        next(new BadRequest("Некорректный id"));
       } else {
-        res.status(500).send({ message: "Произошла ошибка" });
+        next(err);
       }
     });
 };
 
-const likeCard = (req, res) => {
+const likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $addToSet: { likes: req.user._id } }, // добавить _id в массив, если его там нет
@@ -50,20 +52,20 @@ const likeCard = (req, res) => {
   )
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: "Невалидный id" });
+        throw new NotFoundError("Невалидный id");
       }
       return res.send({ data: card });
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        res.status(400).send({ message: "Невалидный id" });
+        next(new NotFoundError("Невалидный id"));
       } else {
-        res.status(500).send({ message: "Произошла ошибка" });
+        next(err);
       }
     });
 };
 
-const dislikeCard = (req, res) => {
+const dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } }, // убрать _id из массива
@@ -71,15 +73,15 @@ const dislikeCard = (req, res) => {
   )
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: "Невалидный id" });
+        throw new NotFoundError("Невалидный id");
       }
       return res.send({ data: card });
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        res.status(400).send({ message: "Невалидный id" });
+        next(new NotFoundError("Невалидный id"));
       } else {
-        res.status(500).send({ message: "Произошла ошибка" });
+        next(err);
       }
     });
 };
