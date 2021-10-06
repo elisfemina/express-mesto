@@ -1,4 +1,5 @@
 const Card = require("../models/card");
+const NotFoundError = require('../errors/not-found-err');
 
 const getCards = (req, res) => {
   Card.find({})
@@ -22,12 +23,15 @@ const createCard = (req, res) => {
 };
 
 const deleteCard = (req, res) => {
-  Card.findByIdAndRemove(req.params.cardId)
+  const { id } = req.params;
+  Card.findById(id)
+    .orFail(() => new NotFoundError('Нет карточки по заданному id'))
     .then((card) => {
-      if (!card) {
-        return res.status(404).send({ message: "Невалидный id" });
+      if (!card.owner.equals(req.user._id)) {
+        return res.status(403).send({ message: "Нельзя удалить чужую карточку" });
       }
-      return res.send({ data: card });
+      return Card.deleteOne(card)
+        .then(() => res.send({ data: card }));
     })
     .catch((err) => {
       if (err.name === "CastError") {
