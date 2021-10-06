@@ -35,8 +35,10 @@ const createUser = (req, res) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
-
-  bcrypt
+  if (email) {
+    return res.status(409).send({ message: 'Такой пользователь уже есть' });
+  }
+  return bcrypt
     .hash(password, SALT_ROUNDS)
     .then((hash) => User.create({
       name,
@@ -45,9 +47,14 @@ const createUser = (req, res) => {
       email,
       password: hash,
     }))
-    .then((user) => res.status(201).send({ user }))
+    .then(() => res.status(200).send({
+      data: {
+        name, about, avatar, email,
+      },
+    }))
 
     .catch((err) => {
+      // Записал проверку на уже существующий аккаунт (почту) выше, перед bcrypt. Верно ли?
       if (err.name === "ValidationError") {
         res.status(400).send({
           message: `${Object.values(err.errors)
