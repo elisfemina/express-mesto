@@ -30,7 +30,7 @@ const deleteCard = (req, res, next) => {
     .orFail(() => new NotFoundError('Нет карточки по заданному id'))
     .then((card) => {
       if (!card.owner.equals(req.user._id)) {
-        next(new Forbidden({ message: "Нельзя удалить чужую карточку" }));
+        throw new Forbidden("Нельзя удалить чужую карточку");
       }
       return Card.deleteOne(card)
         .then(() => res.send({ data: card }));
@@ -58,7 +58,7 @@ const likeCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        next(new NotFoundError("Невалидный id"));
+        next(new BadRequest("Некорректный id"));
       } else {
         next(err);
       }
@@ -79,7 +79,7 @@ const dislikeCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        next(new NotFoundError("Невалидный id"));
+        next(new BadRequest("Некорректный id"));
       } else {
         next(err);
       }

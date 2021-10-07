@@ -1,7 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 
-const { errors } = require('celebrate');
+const { celebrate, Joi, errors } = require('celebrate');
+const validator = require('validator');
 const { createUser, login } = require('./controllers/users');
 const auth = require('./middlewares/auth');
 const NotFoundError = require('./errors/not-found-err');
@@ -16,8 +17,31 @@ mongoose.connect("mongodb://localhost:27017/mestodb", {
   useNewUrlParser: true,
 });
 
-app.post('/signin', login);
-app.post('/signup', createUser);
+const validateUrl = (value) => {
+  const result = validator.isURL(value);
+  if (!result) {
+    throw new Error('Введена некорректная ссылка');
+  }
+
+  return value;
+};
+
+app.post('/signin', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required(),
+  }),
+}), login);
+
+app.post('/signup', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required(),
+    name: Joi.string().min(2).max(30),
+    about: Joi.string().min(2).max(30),
+    avatar: Joi.string().custom(validateUrl),
+  }),
+}), createUser);
 
 // авторизация
 
@@ -30,7 +54,7 @@ app.use((req, res, next) => next(new NotFoundError('Необходима авт�
 
 app.use(errors());
 
-app.use((err, req, res) => {
+app.use((err, req, res, next) => {
   // если у ошибки нет статуса, выставляем 500
   const { statusCode = 500, message } = err;
 
@@ -42,6 +66,7 @@ app.use((err, req, res) => {
         ? 'На сервере произошла ошибка'
         : message,
     });
+  next();
 });
 
 app.listen(PORT, () => {

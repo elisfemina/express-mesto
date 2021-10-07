@@ -20,8 +20,8 @@ const validateUrl = (value) => {
 router.get("/me", getUser);
 
 router.get("/:userId", celebrate({
-  body: Joi.object().keys({
-    ObjectID: Joi.string().length(24).hex(),
+  params: Joi.object().keys({
+    userId: Joi.string().length(24).hex(),
   }),
 }), getUser);
 
@@ -31,10 +31,13 @@ router.patch("/me", celebrate({
   body: Joi.object().keys({
     name: Joi.string().required().min(2).max(30),
     about: Joi.string().required().min(2).max(30),
-    avatar: Joi.string().required().custom(validateUrl),
   }),
 }), updateUser);
 
-router.patch("/avatar", updateAvatarUser);
+router.patch("/avatar", celebrate({
+  body: Joi.object().keys({
+    avatar: Joi.string().required().custom(validateUrl),
+  }),
+}), updateAvatarUser);
 
 module.exports = router;
